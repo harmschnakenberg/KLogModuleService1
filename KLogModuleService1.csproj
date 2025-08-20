@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishAot>true</PublishAot>
+    <UserSecretsId>dotnet-KLogModuleService1-155c6ac4-e3b6-4bbc-8f66-9b2f1789b6e6</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>.</DockerfileContext>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ApplicationIcon>KKT_Logo2022.ico</ApplicationIcon>
+    <NoWin32Manifest>true</NoWin32Manifest>
+    <StartupObject></StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="KKT_Logo2022.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grapevine" Version="5.0.2" />
+    <PackageReference Include="HttpMultipartParser" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+    <PackageReference Include="S7netplus" Version="0.20.0" />
+    <PackageReference Include="SQLite.Native" Version="3.12.3" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+  </ItemGroup>
+</Project>

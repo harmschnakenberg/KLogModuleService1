@@ -4,14 +4,14 @@ using System.Net;
 namespace KLogModuleService1
 {
 
-    [RestResource(BasePath = "/config/user")]
+    [RestResource(BasePath = "/config")]
     public partial class ConfigRoutes
     {
 
 
         #region Benutzerverwaltung
 
-        [RestRoute("Get")]
+        [RestRoute("Get", "/user")]
         public static async Task UserManagement(IHttpContext context)
         {
             await UserManagement(context, string.Empty);
@@ -30,9 +30,6 @@ namespace KLogModuleService1
 
             bool isAdmin = user.UserRole == User.Role.Administrator;
 
-            string userTable = string.Empty;
-            if (isAdmin) userTable = Sql.GetAllUsers(); //Nur Administratoren sehen alle Benutzer
-
             string script = @"
                 <script>
                   function Select(tr){
@@ -50,6 +47,9 @@ namespace KLogModuleService1
                   }
                 </script>";
 
+            string userTable = string.Empty;
+            if (isAdmin) userTable =   Html.DataTableToHtml(Sql.GetAllUsers(), script); //Nur Administratoren sehen alle Benutzer
+                    
             string form = @$"
                 <div class='container mt-3'>
                 <h3>Benutzerverwaltung</h3>
@@ -122,7 +122,7 @@ namespace KLogModuleService1
             await context.Response.SendResponseAsync(content.PageBody("Benutzerübersicht", user.Name));
         }
 
-        [RestRoute("Post", "/update")]
+        [RestRoute("Post", "/user/update")]
         public async Task CreateOrUpdateUser(IHttpContext context)
         {
             User user = Sql.LogedInUser(context);
@@ -161,7 +161,7 @@ namespace KLogModuleService1
             await UserManagement(context, message);
         }
 
-        [RestRoute("Post", "/delete")]
+        [RestRoute("Post", "/user/delete")]
         public async Task DeleteUser(IHttpContext context)
         {
             User user = Sql.LogedInUser(context);

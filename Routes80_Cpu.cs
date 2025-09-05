@@ -4,13 +4,94 @@ using System.Data;
 namespace KLogModuleService1
 {
 
-    [RestResource(BasePath = "/config/source")]
+    [RestResource(BasePath = "/config")]
     public partial class ConfigRoutes
     {
 
         #region Datenquellen (SPS, später ggf. OPCUA)
 
-        [RestRoute("Get")]
+        /// <summary>
+        /// Erzeugt neue Stammdaten zu einer Steuerung
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        [RestRoute("Post", "/source/update")]
+        public async Task CreateOrUpdatePlc(IHttpContext context)
+        {
+            User user = Sql.LogedInUser(context);
+
+#if DEBUG
+            Worker.LogInfo("Eingeloggt ist " + user.Name + user.Auth);
+#endif
+            if (user.UserRole != User.Role.Administrator)
+            {
+                //Wenn der Benutzer kein Adminstrator ist
+                string alert = @"
+                <div class='alert alert-danger'>
+                    <strong>Nicht zulässig</strong>
+                    Diese Einstellung kann nur durch einen Administrator geändert werden.
+                </div>";
+                await context.Response.SendResponseAsync(Html.LogInForm(alert).PageBody("Keine Berechtigung"));
+                return;
+            }
+
+            Dictionary<string, string> formContent = context.Locals["FormData"] as Dictionary<string, string> ?? [];
+            bool success = Sql.CreateOrUpdatePlc(formContent, user);
+
+            string message = @"
+                <div class='alert alert-danger'>
+                    <strong>Abbruch</strong>
+                    Deie Datenquelle konnte nicht geändert werden.
+                </div>";
+
+            if (success)
+                message = @$"
+                <div class='alert alert-success'>
+                    <strong>Datenquelle geändert</strong>
+                    Die Datenquelle <b>{formContent["cpuname"]}</b> wurde von {user.Name} angepasst.
+                </div>";
+
+            await ConfigSource(context, message);
+        }
+
+
+        [RestRoute("Post", "/source/delete")]
+        public async Task DeletePlc(IHttpContext context)
+        {
+            User user = Sql.LogedInUser(context) ?? new User();
+
+            if (user.UserRole != User.Role.Administrator)
+            {
+                //Wenn der Benutzer kein Adminstrator ist
+                string alert = @"
+                <div class='alert alert-danger'>
+                    <strong>Nicht zulässig</strong>
+                    Diese Einstellung kann nur durch einen Administrator geändert werden.
+                </div>";
+                await context.Response.SendResponseAsync(Html.LogInForm(alert).PageBody("Keine Berechtigung"));
+                return;
+            }
+
+            Dictionary<string, string> formContent = context.Locals["FormData"] as Dictionary<string, string> ?? [];
+            bool success = Sql.DeletePlc(formContent, user);
+
+            string message = @"
+                <div class='alert alert-danger'>
+                    <strong>Abbruch</strong>
+                    Die Datenquelle konnte nicht gelöscht werden.
+                </div>";
+
+            if (success)
+                message = @$"
+                <div class='alert alert-success'>
+                    <strong>Datenquelle erfolgreich entfernt</strong>
+                    Der Datenquelle <b>[{formContent["cpuid"]}] {formContent["cpuname"] ?? "???"}</b> wurde gelöscht.
+                </div>";
+
+            await ConfigSource(context, message);
+        }
+
+        [RestRoute("Get", "/source")]
         public static async Task ConfigSource(IHttpContext context)
         {
             await ConfigSource(context, string.Empty);
@@ -45,8 +126,6 @@ namespace KLogModuleService1
 
             #endregion
 
-            string html = Html.DataTableToHtml(table);
-
             string script = @"
                 <script>
                   function Select(tr){
@@ -61,6 +140,8 @@ namespace KLogModuleService1
                     document.forms['spsform']['comment'].innerHTML = tr.childNodes[8].innerHTML;
                   }
                 </script>";
+
+            string html = Html.DataTableToHtml(table, script);
 
             string form = @"
                 <div class='container mt-3'>
@@ -117,88 +198,16 @@ namespace KLogModuleService1
                 </form>
                 </div>";
 
-            await context.Response.SendResponseAsync((html + script + form).PageBody("SPS Verbindung einrichten", user.Name));
-        }
-
-        /// <summary>
-        /// Erzeugt neue Stammdaten zu einer Steuerung
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns></returns>
-        [RestRoute("Post", "/update")]
-        public async Task CreateOrUpdatePlc(IHttpContext context)
-        {
-            User user = Sql.LogedInUser(context);
-
+            string tagList = "<ul class='list-group container mt-3'>";
 #if DEBUG
-            Worker.LogInfo("Eingeloggt ist " + user.Name + user.Auth);
+            foreach (string key in MyS7.TagValues.Keys)
+            {
+                tagList += $"<li class='list-group-item'>{key}&nbsp;<span class='badge bg-info'>{MyS7.TagValues[key]}</span></li>";
+            }
 #endif
-            if (user.UserRole != User.Role.Administrator)
-            {
-                //Wenn der Benutzer kein Adminstrator ist
-                string alert = @"
-                <div class='alert alert-danger'>
-                    <strong>Nicht zulässig</strong>
-                    Diese Einstellung kann nur durch einen Administrator geändert werden.
-                </div>";
-                await context.Response.SendResponseAsync(Html.LogInForm(alert).PageBody("Keine Berechtigung"));
-                return;
-            }
+            tagList += "</ul>";
 
-            Dictionary<string, string> formContent = context.Locals["FormData"] as Dictionary<string, string> ?? [];
-            bool success = Sql.CreateOrUpdatePlc(formContent, user);
-
-            string message = @"
-                <div class='alert alert-danger'>
-                    <strong>Abbruch</strong>
-                    Deie Datenquelle konnte nicht geändert werden.
-                </div>";
-
-            if (success)
-                message = @$"
-                <div class='alert alert-success'>
-                    <strong>Datenquelle geändert</strong>
-                    Die Datenquelle <b>{formContent["cpuname"]}</b> wurde von {user.Name} angepasst.
-                </div>";
-
-            await ConfigSource(context, message);
-        }
-
-
-        [RestRoute("Post", "/delete")]
-        public async Task DeletePlc(IHttpContext context)
-        {
-            User user = Sql.LogedInUser(context) ?? new User();
-
-            if (user.UserRole != User.Role.Administrator)
-            {
-                //Wenn der Benutzer kein Adminstrator ist
-                string alert = @"
-                <div class='alert alert-danger'>
-                    <strong>Nicht zulässig</strong>
-                    Diese Einstellung kann nur durch einen Administrator geändert werden.
-                </div>";
-                await context.Response.SendResponseAsync(Html.LogInForm(alert).PageBody("Keine Berechtigung"));
-                return;
-            }
-
-            Dictionary<string, string> formContent = context.Locals["FormData"] as Dictionary<string, string> ?? [];
-            bool success = Sql.DeletePlc(formContent, user);
-
-            string message = @"
-                <div class='alert alert-danger'>
-                    <strong>Abbruch</strong>
-                    Die Datenquelle konnte nicht gelöscht werden.
-                </div>";
-
-            if (success)
-                message = @$"
-                <div class='alert alert-success'>
-                    <strong>Datenquelle erfolgreich entfernt</strong>
-                    Der Datenquelle <b>[{formContent["cpuid"]}] {formContent["cpuname"] ?? "???"}</b> wurde gelöscht.
-                </div>";
-
-            await ConfigSource(context, message);
+            await context.Response.SendResponseAsync((html + form + tagList).PageBody("SPS Verbindung einrichten", user.Name));
         }
 
         #endregion

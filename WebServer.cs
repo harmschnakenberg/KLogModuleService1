@@ -29,12 +29,14 @@ namespace KLogModuleService1
 
                 RestServer.AfterStarting += (s) =>
                 {                    
-                    s.RouteScanner.Scan();
+                    var routes = s.RouteScanner.Scan();
                     
                     //OpenBrowser(s.Prefixes.First());
                     OpenBrowser($"http://localhost:{WebServer.ServerPort}/");
 
                     Console.WriteLine("Web-Server gestartet.\r\n" + string.Join(' ', s.Prefixes));
+
+                    Worker.LogInfo($"{string.Join("\r\n", routes.ToList())}\r\n\r\n{string.Join(',', RestServer.Prefixes.ToList())}");
                 };
 
                 RestServer.BeforeStopping += (s) =>

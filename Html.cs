@@ -4,6 +4,7 @@ using System.Data;
 using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace KLogModuleService1
@@ -46,7 +47,7 @@ namespace KLogModuleService1
               </li>
 
               <li class='nav-item'>
-                <a href='/config/tag/import' class='btn'>Variablen</a>
+                <a href='/config/tag' class='btn'>Variablen</a>
               </li>
               <li class='nav-item'>
                 <a href='#' class='btn'>Link Button</a>
@@ -103,7 +104,7 @@ namespace KLogModuleService1
         }
 
 
-        public static string DataTableToHtml(DataTable dt)
+        public static string DataTableToHtml(DataTable dt, string script = "<script>function Select(tr){ }</script>;")
         {
             if (dt.Rows.Count == 0) return string.Empty; 
 
@@ -126,12 +127,13 @@ namespace KLogModuleService1
                 
                 builder.Append("</tr>");
             }
-            builder.Append("</tbody></table></div>");
+            builder.AppendLine("</tbody></table></div>");
+            builder.AppendLine(script);
 
             return builder.ToString();
         }
 
-        
+
         internal static string LogInForm(string alert = "")
         {
 

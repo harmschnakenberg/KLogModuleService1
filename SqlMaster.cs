@@ -35,16 +35,16 @@ namespace KLogModuleService1
         }
 
         #region Benutzerverwaltung
-        internal static string GetAllUsers()
+        internal static DataTable GetAllUsers()
         {
 #if DEBUG
             string query = @"SELECT * FROM User; ";
-            var dt = Sql.SelectDataTable(MasterDbPath, query, null) ?? new System.Data.DataTable();
-            return Html.DataTableToHtml(dt);
+            return Sql.SelectDataTable(MasterDbPath, query, null) ?? new System.Data.DataTable();
+          
 #else
             string query = @"SELECT Id, Name, IsAdmin FROM User; ";
-            var dt = Sql.SelectDataTable(MasterDbPath, query, null) ?? new System.Data.DataTable();
-            return Html.DataTableToHtml(dt);
+            return Sql.SelectDataTable(MasterDbPath, query, null) ?? new System.Data.DataTable();
+            //return Html.DataTableToHtml(dt);
 #endif
 
         }
@@ -383,53 +383,7 @@ namespace KLogModuleService1
 
         #endregion
 
-        #region Variablenmagazin
-
-        internal static DataTable GetAllTags()
-        {
-            string query = @" 
-                SELECT TagName, TagType, TagComment FROM TagNames
-                ; ";
-
-            return Sql.MasterSelectDataTable(query, []);
-        }
-
-        internal static bool CreateOrUpdateTags(Dictionary<string, string> form, User admin)
-        {
-
-#if DEBUG
-            Worker.LogWarning(string.Join(' ', form));
-#endif
-
-            if (admin.Name.Length < 2)
-                return false;
-
-            StringBuilder QueryBuiler = new StringBuilder();
-
-            #region Formular auslesen
-
-            for (int i = 0; i < 10; i++)
-            {
-                if (!form.ContainsKey($"TagName{i}"))
-                    continue;
-
-                string tagName = WebUtility.UrlDecode(form[$"TagName{i}"]);
-                string tagType = WebUtility.UrlDecode(form[$"TagType{i}"]);
-                string tagComment = WebUtility.UrlDecode(form[$"TagComment{i}"]);
-
-                if (string.IsNullOrEmpty(tagName))
-                    continue;
-
-                QueryBuiler.Append($"INSERT OR IGNORE INTO TagNames (TagName, TagType, TagComment) VALUES ({tagName}, {tagType}, {tagComment}); ");
-
-            }
-
-            #endregion
-
-            return Sql.DataNonQueryAsync(QueryBuiler.ToString());
-        }
-
-        #endregion
+      
 
     }
 

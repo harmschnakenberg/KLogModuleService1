@@ -1,20 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace KLogModuleService1
 {
     internal partial class Sql
     {
+        #region Datenbank-Pfade
+
         private static readonly string AppFolder = AppDomain.CurrentDomain.BaseDirectory;
+
+        /// <summary>
+        /// Pfad zur Stammdaten-Datenbank
+        /// </summary>
         static string MasterDbPath { get; } = Path.Combine(AppFolder, "db", "KLogMaster.db");
-        static string DailyDbPath { get; } = Path.Combine(AppFolder, "db", DateTime.Now.ToString("yyyyMMdd") + ".db");
-         
+
+        /// <summary>
+        /// Pfad zur Tages-Datenbank von heute
+        /// </summary>
+        static string DailyDbPath { get; } = GetDailyDbPath();
+
+        /// <summary>
+        /// Pfad zur Tages-Datenbank von date
+        /// </summary>
+        /// <param name="date">Datum des Tages der gesuchten Datenbank</param>
+        /// <returns>Pfad zur Datenbank</returns>
+        static string GetDailyDbPath(DateTime date)
+        {
+            return Path.Combine(AppFolder, "db", date.ToUniversalTime().ToString("yyyyMMdd") + ".db");           
+        }
+
+        /// <summary>
+        /// Pfad zur Tages-Datenbank von heute
+        /// </summary>
+        /// <returns>Pfad zur Datenbank</returns>
+        static string GetDailyDbPath()
+        {
+            return GetDailyDbPath(DateTime.UtcNow);
+        }
+
+        #endregion
+
 
         internal static bool CheckDbFile(string dbPath, bool testOpen = true)
         {
@@ -30,7 +63,7 @@ namespace KLogModuleService1
             {
                 if (dbPath == MasterDbPath)
                     CreateDataBaseMaster();
-                if (dbPath == DailyDbPath)
+                if (dbPath == GetDailyDbPath())
                     CreateDataBaseDaily();
             }
 
@@ -160,8 +193,7 @@ namespace KLogModuleService1
         /// Erzeugt für jeden Tag eine Datenbank für die auzuzeichnenden Daten
         /// </summary>
         internal static void CreateDataBaseDaily()
-        {
-
+        {            
             Worker.LogInfo($"Erstelle eine neue Datenbank-Datei unter '{DailyDbPath}'");
 
             try
@@ -182,13 +214,41 @@ namespace KLogModuleService1
                           ); ";
                 _ = DataNonQueryAsync(query);
 
-
                 query = @"CREATE TABLE IF NOT EXISTS Data (                         
                           Time TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, 
                           TagName TEXT NOT NULL,
                           TagValue NUMERIC
                           ); ";
                 _ = DataNonQueryAsync(query);
+
+                #endregion
+
+                #region Tabelle TagNames mit TagNames aus der letzten Tabelle füllen
+
+                DataTable dt = new();
+                DateTime date = DateTime.UtcNow;
+                int counter = 100; // limitieren, wie weit in die Vergangenheit geschaut werden soll
+                
+                //Wenn die Datenbank grade neu erstellt wurde ist sie leer.
+                //Deshalb die letzte Tages-DB suchen und TagNames übernehmen
+                while (dt.Rows.Count == 0 && --counter > 0)
+                {
+                    date = date.AddDays(-1);
+                    string dbPath = Path.Combine(AppFolder, "db", date.ToString("yyyyMMdd") + ".db");
+
+                    if (!File.Exists(dbPath))
+                        continue;
+#if DEBUG
+                    Worker.LogInfo($"[{counter}] Lese TagNames aus " + dbPath);
+#endif                    
+                    query = $"ATTACH DATABASE '{dbPath}' AS old_db; " +
+                    $"INSERT INTO TagNames SELECT * FROM old_db.TagNames; " +
+                    $"SELECT TagName FROM TagNames; ";
+
+                    dt = SelectDataTable(DailyDbPath, query, null);
+                }
+
+                //FRAGE: globale TagList neu einlesen??
 
                 #endregion
             }

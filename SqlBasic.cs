@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace KLogModuleService1
@@ -217,9 +218,33 @@ namespace KLogModuleService1
             return SelectDataTable(MasterDbPath, query, args);
         }
 
-        internal static DataTable DataSelectDataTable(string query, Dictionary<string, object>? args)
+
+        /// <summary>
+        /// Greift auf die aktuelle Tages-Datenbank zurück. 
+        /// </summary>
+        /// <param name="query">SQL-Abfrage</param>
+        /// <param name="args">SQL-Abfrage Parameter</param>
+        /// <param name="depth">Wenn das Abfrageergebnis leer ist, werden diese Anzahl Vortage durchsucht, bis Datensätze gefunden werden.</param>
+        /// <returns></returns>
+        internal static DataTable DataSelectDataTable(string query, Dictionary<string, object>? args, int depth = 1)
         {
-            return SelectDataTable(DailyDbPath, query, args);
+
+            DataTable dt = new();
+            DateTime date = DateTime.UtcNow;
+            //int counter = 30; //maximal 30 Tage zurück gehen
+
+            //Wenn die Datenbank grade neu erstellt wurde, ist sie leer
+            while (dt.Rows.Count == 0 && --depth >= 0)
+            {                
+                string dbPath = Path.Combine(AppFolder, "db", date.ToString("yyyyMMdd") + ".db");
+                date = date.AddDays(-1);
+#if DEBUG
+                Worker.LogInfo($"[{depth}] Lese aus " + dbPath);
+#endif
+
+                dt = SelectDataTable(dbPath, query, args);
+            }
+            return dt;
         }
 
         #endregion

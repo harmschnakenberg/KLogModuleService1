@@ -94,6 +94,21 @@ namespace KLogModuleService1
     public class Routes
     {
 
+        [RestRoute("Get", "/live")]
+        public async Task LiveView(IHttpContext context)
+        {
+            string html = "<h2>Aktuelle Werte</h2>";
+
+            //TODO: Alle Tags in einer Tabelle 'TagName | Beschreibung | Wert', filterbar(?)
+            //WebSocket mit selbst aktualiserenden Werten oder AJAX Long-Poll
+            
+
+            await context.Response.SendResponseAsync(html.PageBody("K-Log Logout"));
+        }
+
+
+
+
         [RestRoute("Post", "/login")]
         public async Task Login(IHttpContext context)
         {
